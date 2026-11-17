@@ -22,9 +22,22 @@ comps.json 을 한 번 받아 두고, 기물을 바꿀 때마다 브라우저 �
 - [x] 라이엇 개발 키 발급, API 동작 확인
 - [x] 수집 스크립트 `collector/collect.mjs` (재실행하면 이어서 받음)
 - [x] 세트 18 기물/시너지 데이터 `data/set18.json`
+- [x] 패치 날짜 필터 (`config.json`)
 - [ ] 덱 통계 계산 스크립트 → `comps.json`
 - [ ] React 앱 (기물 선택 UI + 추천 목록)
 - [ ] Personal API Key 신청 (개발 키는 24시간마다 만료)
+
+## 패치 필터 (`config.json`)
+
+```json
+{ "set": 18, "patch": "18.6", "patchStart": "2026-11-05" }
+```
+
+- API 응답의 패치 버전(`game_version`)이 `?.?.?.?` 로 가려져 있어서 **날짜로** 패치를 구분한다.
+- 수집: `patchStart`(한국 시간 0시) 이후 게임만 요청한다 (`startTime` 파라미터). 다른 세트 게임은 건너뛴다.
+- 통계(만들 예정): 같은 기준으로 `patchStart` 이후 게임만 쓴다. 예전 게임은 지우지 않고 계산에서만 뺀다.
+- 패치 일정: 18.5 = 10/21, 18.6 = 11/4, 18.7 = 11/11 예정이었으나 공식 패치노트 없음, **19.1(세트 19 시작) = 12/1 예정**.
+- 새 패치가 나오면 `patch`, `patchStart` 만 바꾼다. 새 세트가 시작되면 `set` 도 바꾸고 `node collector/extract-set.mjs 19` 로 기물 데이터를 다시 뽑는다 (Community Dragon 원본을 새로 받은 뒤). 이때 `data/collect-state.json` 은 지워야 유저들을 처음부터 다시 훑는다.
 
 ## 다른 PC에서 이어서 하기
 

@@ -10,6 +10,10 @@ const MATCHES_FILE = path.join(DATA, 'matches.jsonl');
 const STATE_FILE = path.join(DATA, 'collect-state.json');
 const PLAYERS_FILE = path.join(DATA, 'players.json');
 
+// config.json 의 patchStart 이후 게임만 받는다 (API 응답의 패치 버전이 가려져 있어서 날짜로 거른다)
+const CONFIG = JSON.parse(fs.readFileSync(path.join(ROOT, 'config.json'), 'utf8'));
+const START_TIME = Math.floor(new Date(`${CONFIG.patchStart}T00:00:00+09:00`).getTime() / 1000);
+
 const MATCHES_PER_PLAYER = 20;
 const RANKED_QUEUE = 1100;
 // 개발 키 한도: 1초 20회, 2분 100회 → 1.25초 간격이면 2분에 96회
@@ -97,7 +101,12 @@ function loadSavedMatchIds() {
   const ids = new Set();
   if (!fs.existsSync(MATCHES_FILE)) return ids;
   for (const line of fs.readFileSync(MATCHES_FILE, 'utf8').split('\n')) {
-    if (line.trim()) ids.add(JSON.parse(line).id);
+    if (!line.trim()) continue;
+    try {
+      ids.add(JSON.parse(line).id);
+    } catch {
+      // 중간에 멈춰서 잘린 마지막 줄은 무시 (그 게임은 다시 받는다)
+    }
   }
   return ids;
 }
@@ -131,12 +140,12 @@ async function main() {
       if (donePlayers.has(player.puuid)) continue;
       n++;
       const ids = await riot(
-        `https://asia.api.riotgames.com/tft/match/v1/matches/by-puuid/${player.puuid}/ids?count=${MATCHES_PER_PLAYER}`,
+        `https://asia.api.riotgames.com/tft/match/v1/matches/by-puuid/${player.puuid}/ids?count=${MATCHES_PER_PLAYER}&startTime=${START_TIME}`,
       ) ?? [];
       const fresh = ids.filter(id => !saved.has(id) && !skipped.has(id));
       for (const id of fresh) {
         const match = await riot(`https://asia.api.riotgames.com/tft/match/v1/matches/${id}`);
-        if (!match || match.info.queue_id !== RANKED_QUEUE) {
+        if (!match || match.info.queue_id !== RANKED_QUEUE || match.info.tft_set_number !== CONFIG.set) {
           skipped.add(id);
           continue;
         }
