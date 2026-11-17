@@ -1,0 +1,5 @@
+.env
+node_modules/
+dist/
+data/cdragon-raw/
+data-collect.log
